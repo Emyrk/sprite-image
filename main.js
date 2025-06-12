@@ -1,52 +1,43 @@
-// const { createCanvas, loadImage } = require('canvas');
-// const fs = require('fs');
-
-// // create a 512x512 canvas
-// const width = 512;
-// const height = 512;
-// const canvas = createCanvas(width, height);
-// const ctx = canvas.getContext('2d');
-
-// // draw something simple
-// ctx.fillStyle = '#ffffff';
-// ctx.fillRect(0, 0, width, height);
-
-// ctx.fillStyle = '#ff0000';
-// ctx.fillRect(100, 100, 300, 300);
-
-// ctx.font = '48px sans-serif';
-// ctx.fillStyle = '#000000';
-// ctx.fillText('Hello!', 180, 300);
-
-// // save to file
-// const buffer = canvas.toBuffer('image/png');
-// fs.writeFileSync('./output.png', buffer);
-
-// console.log('Image saved!');
-
-
+const express = require('express');
 const puppeteer = require('puppeteer');
-const fs = require('fs');
+const querystring = require('querystring');
 
-(async () => {
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
+const app = express();
+const PORT = 3000;
 
-  await page.goto('https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/#?body=Body_color_light&head=Human_male_light'); // <-- your website
+app.get('/render.png', async (req, res) => {
+  const q = querystring.stringify(req.query)
+  const url = `https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator#${q}`;
 
-  const id = "#previewAnimations"
+  console.log(`Rendering: ${url}`);
 
-  // Wait for the div to appear
-  await page.waitForSelector(id); // change selector
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: 'new', // newer headless mode
+    //   args: ['--no-sandbox', '--disable-setuid-sandbox'] // safer for some envs
+    });
 
-  // Get element handle
-  const element = await page.$(id);
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-  // Screenshot the element
-  const screenshot = await element.screenshot({ path: 'div-screenshot.png' });
+    // Optional: wait for canvas or some selector you care about
+    await page.waitForSelector('canvas');
 
-  console.log('Div captured!');
-  // const buffer = canvas.toBuffer('image/png');
-  fs.writeFileSync('./output.png', screenshot);
-  await browser.close();
-})();
+    // Capture full page, or target specific element
+    const element = await page.$('canvas');  // <-- capture only the canvas
+    const screenshotBuffer = await element.screenshot({ type: 'png' });
+
+    res.set('Content-Type', 'image/png');
+    res.send(screenshotBuffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error generating image');
+  } finally {
+    if (browser) await browser.close();
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running at http://localhost:${PORT}`);
+});
