@@ -4,11 +4,14 @@ const querystring = require('querystring');
 
 const app = express();
 const PORT = 3000;
+// https://crates.io/crates/lpcg
+// https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator
 
 app.get('/render.png', async (req, res) => {
   const q = querystring.stringify(req.query)
-  const url = `https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator#${q}`;
+  const url = `https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/#?body=Body_color_light&head=Human_male_light&${q}`;
 
+  console.log("New request", q)
   console.log(`Rendering: ${url}`);
 
   let browser;
